@@ -90,15 +90,15 @@ class HabitProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> cycleHabitStatus(String habitId, [DateTime? targetDate]) async {
+  Future<HabitStatus?> cycleHabitStatus(String habitId, [DateTime? targetDate]) async {
     final date = targetDate ?? _selectedDate;
     final normDate = DateTime(date.year, date.month, date.day);
 
     // Only today is editable
-    if (normDate != today) return;
+    if (normDate != today) return null;
 
     final index = _habits.indexWhere((h) => h.id == habitId);
-    if (index == -1) return;
+    if (index == -1) return null;
 
     // Haptic feedback requirement
     await HapticFeedback.lightImpact();
@@ -115,6 +115,25 @@ class HabitProvider with ChangeNotifier {
 
     await _storageService.saveHabits(_habits);
     _updateReminderNotification();
+
+    return nextStatus;
+  }
+
+  Future<void> saveReflectionForDate(String habitId, DateTime date, String reason) async {
+    final normDate = DateTime(date.year, date.month, date.day);
+    if (normDate != today) return;
+
+    final index = _habits.indexWhere((h) => h.id == habitId);
+    if (index == -1) return;
+
+    final habit = _habits[index];
+    final updatedReflections = Map<String, String>.from(habit.reflections);
+    updatedReflections[Habit.formatDate(date)] = reason.trim();
+
+    _habits[index] = habit.copyWith(reflections: updatedReflections);
+    notifyListeners();
+
+    await _storageService.saveHabits(_habits);
   }
 
   Future<void> setHabitStatusForDate(String habitId, DateTime date, HabitStatus status) async {

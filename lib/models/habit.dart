@@ -59,6 +59,7 @@ class Habit {
   final int iconCodePoint;
   final DateTime createdAt;
   final Map<String, HabitStatus> history; // Key format: YYYY-MM-DD
+  final Map<String, String> reflections; // Key format: YYYY-MM-DD
 
   Habit({
     required this.id,
@@ -66,7 +67,9 @@ class Habit {
     required this.iconCodePoint,
     required this.createdAt,
     Map<String, HabitStatus>? history,
-  }) : history = history ?? {};
+    Map<String, String>? reflections,
+  })  : history = history ?? {},
+        reflections = reflections ?? {};
 
   static String formatDate(DateTime date) {
     final year = date.year.toString().padLeft(4, '0');
@@ -80,12 +83,18 @@ class Habit {
     return history[key] ?? HabitStatus.notDone;
   }
 
+  String? getReflectionForDate(DateTime date) {
+    final key = formatDate(date);
+    return reflections[key];
+  }
+
   Habit copyWith({
     String? id,
     String? name,
     int? iconCodePoint,
     DateTime? createdAt,
     Map<String, HabitStatus>? history,
+    Map<String, String>? reflections,
   }) {
     return Habit(
       id: id ?? this.id,
@@ -93,6 +102,7 @@ class Habit {
       iconCodePoint: iconCodePoint ?? this.iconCodePoint,
       createdAt: createdAt ?? this.createdAt,
       history: history ?? Map.from(this.history),
+      reflections: reflections ?? Map.from(this.reflections),
     );
   }
 
@@ -141,6 +151,7 @@ class Habit {
       'iconCodePoint': iconCodePoint,
       'createdAt': createdAt.toIso8601String(),
       'history': historyMap,
+      'reflections': reflections,
     };
   }
 
@@ -151,12 +162,19 @@ class Habit {
       history[key] = HabitStatus.fromInt(value as int);
     });
 
+    final reflectionsJson = json['reflections'] as Map<String, dynamic>? ?? {};
+    final reflections = <String, String>{};
+    reflectionsJson.forEach((key, value) {
+      reflections[key] = value.toString();
+    });
+
     return Habit(
       id: json['id'] as String,
       name: json['name'] as String,
       iconCodePoint: json['iconCodePoint'] as int? ?? Icons.star.codePoint,
       createdAt: DateTime.parse(json['createdAt'] as String),
       history: history,
+      reflections: reflections,
     );
   }
 }

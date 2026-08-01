@@ -107,5 +107,25 @@ void main() {
       expect(0.6 < slot20.completionThreshold, isTrue); // < 75% triggers
       expect(0.8 < slot20.completionThreshold, isFalse); // >= 75% does not trigger
     });
+
+    test('Habit reflection saving and JSON serialization', () async {
+      final now = DateTime.now();
+      final todayStr = Habit.formatDate(now);
+
+      final habit = Habit(
+        id: 'refl_1',
+        name: 'Reflection Test',
+        iconCodePoint: 0xe6d4,
+        createdAt: now,
+        history: {todayStr: HabitStatus.partial},
+        reflections: {todayStr: 'Felt tired after work'},
+      );
+
+      expect(habit.getReflectionForDate(now), equals('Felt tired after work'));
+
+      final json = habit.toJson();
+      final recreated = Habit.fromJson(json);
+      expect(recreated.getReflectionForDate(now), equals('Felt tired after work'));
+    });
   });
 }

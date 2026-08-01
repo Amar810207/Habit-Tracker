@@ -5,6 +5,7 @@ import '../providers/habit_provider.dart';
 import 'animated_progress_ring.dart';
 import 'heatmap_view.dart';
 import 'add_edit_habit_dialog.dart';
+import 'reflection_sheet.dart';
 
 class HabitTile extends StatelessWidget {
   final Habit habit;
@@ -118,8 +119,11 @@ class HabitTile extends StatelessWidget {
               child: AnimatedProgressRing(
                 status: status,
                 onTap: provider.isToday
-                    ? () {
-                        provider.cycleHabitStatus(habit.id);
+                    ? () async {
+                        final newStatus = await provider.cycleHabitStatus(habit.id);
+                        if (newStatus == HabitStatus.partial && context.mounted) {
+                          ReflectionSheet.show(context, habit, provider.selectedDate);
+                        }
                       }
                     : null,
               ),

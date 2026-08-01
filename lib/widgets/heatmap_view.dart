@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/habit.dart';
 import '../providers/habit_provider.dart';
+import 'reflection_sheet.dart';
 
 class HabitHeatmapSheet extends StatelessWidget {
   final Habit habit;
@@ -104,6 +105,7 @@ class HabitHeatmapSheet extends StatelessWidget {
               itemBuilder: (context, index) {
                 final date = days[index];
                 final status = habit.getStatusForDate(date);
+                final reflectionNote = habit.getReflectionForDate(date);
                 final isBeforeFirstLaunch = date.isBefore(provider.firstLaunchDate);
                 final isFuture = date.isAfter(today);
                 final isCurrentDay = date.year == today.year &&
@@ -139,15 +141,30 @@ class HabitHeatmapSheet extends StatelessWidget {
                     width: 2,
                   );
                   tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: ${_statusLabel(status)} (Tap to edit)';
-                  handleTap = () {
-                    provider.cycleHabitStatus(habit.id, date);
+                  handleTap = () async {
+                    final newStatus = await provider.cycleHabitStatus(habit.id, date);
+                    if (newStatus == HabitStatus.partial && context.mounted) {
+                      ReflectionSheet.show(context, habit, date);
+                    }
                   };
                 } else {
                   // Past day after first launch date (Read-only)
                   cellColor = status.color;
                   cellBorder = null;
-                  tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: ${_statusLabel(status)} (Read-only)';
-                  handleTap = null;
+                  
+                  if (status == HabitStatus.partial) {
+                    if (reflectionNote != null && reflectionNote.isNotEmpty) {
+                      tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: Partial ("$reflectionNote")';
+                    } else {
+                      tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: Partial (No note)';
+                    }
+                    handleTap = () {
+                      _showReflectionDialog(context, habit, date, reflectionNote);
+                    };
+                  } else {
+                    tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: ${_statusLabel(status)} (Read-only)';
+                    handleTap = null;
+                  }
                 }
 
                 return GestureDetector(
@@ -191,6 +208,83 @@ class HabitHeatmapSheet extends StatelessWidget {
               _buildLegendItem('Partial', const Color(0xFFF59E0B)),
               _buildLegendItem('Completed', const Color(0xFF10B981)),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReflectionDialog(BuildContext context, Habit habit, DateTime date, String? note) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.note_alt_rounded, color: Colors.amber, size: 24),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                DateFormat('EEE, MMM d, yyyy').format(date),
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Status: ', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Partially Completed',
+                    style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Reflection Note:',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.grey),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black12,
+                ),
+              ),
+              child: Text(
+                (note != null && note.trim().isNotEmpty) ? note : 'No reflection note added for this day.',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: (note != null && note.trim().isNotEmpty) ? FontStyle.normal : FontStyle.italic,
+                  color: (note != null && note.trim().isNotEmpty)
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : Colors.grey,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Close'),
           ),
         ],
       ),
