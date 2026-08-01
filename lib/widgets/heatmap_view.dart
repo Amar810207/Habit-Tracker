@@ -104,28 +104,61 @@ class HabitHeatmapSheet extends StatelessWidget {
               itemBuilder: (context, index) {
                 final date = days[index];
                 final status = habit.getStatusForDate(date);
+                final isBeforeFirstLaunch = date.isBefore(provider.firstLaunchDate);
+                final isFuture = date.isAfter(today);
                 final isCurrentDay = date.year == today.year &&
                     date.month == today.month &&
                     date.day == today.day;
 
-                return GestureDetector(
-                  onTap: () {
+                Color cellColor;
+                BoxBorder? cellBorder;
+                String tooltipText;
+                VoidCallback? handleTap;
+
+                if (isBeforeFirstLaunch) {
+                  cellColor = isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.04);
+                  cellBorder = Border.all(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    width: 1,
+                  );
+                  tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: Not tracked (Before first launch)';
+                  handleTap = null;
+                } else if (isFuture) {
+                  cellColor = isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : Colors.black.withValues(alpha: 0.04);
+                  cellBorder = null;
+                  tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: Future date';
+                  handleTap = null;
+                } else if (isCurrentDay) {
+                  cellColor = status.color;
+                  cellBorder = Border.all(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  );
+                  tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: ${_statusLabel(status)} (Tap to edit)';
+                  handleTap = () {
                     provider.cycleHabitStatus(habit.id, date);
-                  },
+                  };
+                } else {
+                  // Past day after first launch date (Read-only)
+                  cellColor = status.color;
+                  cellBorder = null;
+                  tooltipText = '${DateFormat('MMM d, yyyy').format(date)}: ${_statusLabel(status)} (Read-only)';
+                  handleTap = null;
+                }
+
+                return GestureDetector(
+                  onTap: handleTap,
                   child: Tooltip(
-                    message: '${DateFormat('MMM d, yyyy').format(date)}: ${status.name}',
+                    message: tooltipText,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: status == HabitStatus.notDone && !habit.history.containsKey(Habit.formatDate(date))
-                            ? (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.06))
-                            : status.color,
+                        color: cellColor,
                         borderRadius: BorderRadius.circular(6),
-                        border: isCurrentDay
-                            ? Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 2,
-                              )
-                            : null,
+                        border: cellBorder,
                       ),
                       child: isCurrentDay
                           ? Center(
@@ -148,19 +181,31 @@ class HabitHeatmapSheet extends StatelessWidget {
 
           const SizedBox(height: 12),
           // Legend
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 12,
+            runSpacing: 6,
             children: [
+              _buildLegendItem('Not Tracked', isDark ? Colors.white12 : Colors.grey.shade300),
               _buildLegendItem('Not Done', const Color(0xFFEF4444)),
-              const SizedBox(width: 16),
               _buildLegendItem('Partial', const Color(0xFFF59E0B)),
-              const SizedBox(width: 16),
               _buildLegendItem('Completed', const Color(0xFF10B981)),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _statusLabel(HabitStatus status) {
+    switch (status) {
+      case HabitStatus.completed:
+        return 'Completed';
+      case HabitStatus.partial:
+        return 'Partial';
+      case HabitStatus.notDone:
+        return 'Not Done';
+    }
   }
 
   Widget _buildLegendItem(String label, Color color) {

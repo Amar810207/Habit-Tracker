@@ -77,19 +77,21 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.chevron_left_rounded),
-                        onPressed: () {
-                          provider.setSelectedDate(
-                            provider.selectedDate.subtract(const Duration(days: 1)),
-                          );
-                        },
+                        onPressed: provider.selectedDate.isAfter(provider.firstLaunchDate)
+                            ? () {
+                                provider.setSelectedDate(
+                                  provider.selectedDate.subtract(const Duration(days: 1)),
+                                );
+                              }
+                            : null,
                       ),
                       GestureDetector(
                         onTap: () async {
                           final picked = await showDatePicker(
                             context: context,
                             initialDate: provider.selectedDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
+                            firstDate: provider.firstLaunchDate,
+                            lastDate: provider.today,
                           );
                           if (picked != null) {
                             provider.setSelectedDate(picked);
@@ -113,11 +115,13 @@ class HomeScreen extends StatelessWidget {
                       ),
                       IconButton(
                         icon: const Icon(Icons.chevron_right_rounded),
-                        onPressed: () {
-                          provider.setSelectedDate(
-                            provider.selectedDate.add(const Duration(days: 1)),
-                          );
-                        },
+                        onPressed: provider.selectedDate.isBefore(provider.today)
+                            ? () {
+                                provider.setSelectedDate(
+                                  provider.selectedDate.add(const Duration(days: 1)),
+                                );
+                              }
+                            : null,
                       ),
                     ],
                   ),

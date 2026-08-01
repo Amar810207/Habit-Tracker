@@ -10,6 +10,7 @@ class HabitProvider with ChangeNotifier {
 
   List<Habit> _habits = [];
   DateTime _selectedDate = DateTime.now();
+  late DateTime _firstLaunchDate;
   ThemeMode _themeMode = ThemeMode.system;
   bool _reminderEnabled = true;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 20, minute: 0); // 8:00 PM default
@@ -17,6 +18,11 @@ class HabitProvider with ChangeNotifier {
 
   List<Habit> get habits => List.unmodifiable(_habits);
   DateTime get selectedDate => _selectedDate;
+  DateTime get firstLaunchDate => _firstLaunchDate;
+  DateTime get today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
   ThemeMode get themeMode => _themeMode;
   bool get reminderEnabled => _reminderEnabled;
   TimeOfDay get reminderTime => _reminderTime;
@@ -36,6 +42,8 @@ class HabitProvider with ChangeNotifier {
     notifyListeners();
 
     _habits = await _storageService.loadHabits();
+    _firstLaunchDate = await _storageService.loadFirstLaunchDate(existingHabits: _habits);
+    _selectedDate = today;
     
     final themeStr = await _storageService.loadThemeMode();
     _themeMode = _parseThemeMode(themeStr);
@@ -66,17 +74,29 @@ class HabitProvider with ChangeNotifier {
   }
 
   void setSelectedDate(DateTime date) {
-    _selectedDate = DateTime(date.year, date.month, date.day);
+    final target = DateTime(date.year, date.month, date.day);
+    if (target.isBefore(_firstLaunchDate)) {
+      _selectedDate = _firstLaunchDate;
+    } else if (target.isAfter(today)) {
+      _selectedDate = today;
+    } else {
+      _selectedDate = target;
+    }
     notifyListeners();
   }
 
   void goToToday() {
-    _selectedDate = DateTime.now();
+    _selectedDate = today;
     notifyListeners();
   }
 
   Future<void> cycleHabitStatus(String habitId, [DateTime? targetDate]) async {
     final date = targetDate ?? _selectedDate;
+    final normDate = DateTime(date.year, date.month, date.day);
+
+    // Only today is editable
+    if (normDate != today) return;
+
     final index = _habits.indexWhere((h) => h.id == habitId);
     if (index == -1) return;
 
@@ -98,6 +118,11 @@ class HabitProvider with ChangeNotifier {
   }
 
   Future<void> setHabitStatusForDate(String habitId, DateTime date, HabitStatus status) async {
+    final normDate = DateTime(date.year, date.month, date.day);
+
+    // Only today is editable
+    if (normDate != today) return;
+
     final index = _habits.indexWhere((h) => h.id == habitId);
     if (index == -1) return;
 

@@ -8,6 +8,7 @@ class StorageService {
   static const String _reminderEnabledKey = 'habit_tracker_reminder_enabled';
   static const String _reminderHourKey = 'habit_tracker_reminder_hour';
   static const String _reminderMinuteKey = 'habit_tracker_reminder_minute';
+  static const String _firstLaunchDateKey = 'habit_tracker_first_launch_date';
 
   Future<void> saveHabits(List<Habit> habits) async {
     final prefs = await SharedPreferences.getInstance();
@@ -96,5 +97,42 @@ class StorageService {
       'hour': prefs.getInt(_reminderHourKey) ?? 20, // 8 PM default
       'minute': prefs.getInt(_reminderMinuteKey) ?? 0,
     };
+  }
+
+  Future<DateTime> loadFirstLaunchDate({List<Habit>? existingHabits}) async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedStr = prefs.getString(_firstLaunchDateKey);
+    if (storedStr != null && storedStr.isNotEmpty) {
+      try {
+        final parsed = DateTime.parse(storedStr);
+        return DateTime(parsed.year, parsed.month, parsed.day);
+      } catch (_) {}
+    }
+
+    // Determine initial first launch date
+    DateTime firstDate = DateTime.now();
+    if (existingHabits != null && existingHabits.isNotEmpty) {
+      for (final habit in existingHabits) {
+        final created = DateTime(habit.createdAt.year, habit.createdAt.month, habit.createdAt.day);
+        if (created.isBefore(firstDate)) {
+          firstDate = created;
+        }
+        for (final dateStr in habit.history.keys) {
+          try {
+            final parts = dateStr.split('-');
+            if (parts.length == 3) {
+              final hDate = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+              if (hDate.isBefore(firstDate)) {
+                firstDate = hDate;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    final normalized = DateTime(firstDate.year, firstDate.month, firstDate.day);
+    await prefs.setString(_firstLaunchDateKey, normalized.toIso8601String());
+    return normalized;
   }
 }

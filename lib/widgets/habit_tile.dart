@@ -113,11 +113,16 @@ class HabitTile extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Animated 3-State Circular Ring Progress Indicator
-            AnimatedProgressRing(
-              status: status,
-              onTap: () {
-                provider.cycleHabitStatus(habit.id);
-              },
+            Tooltip(
+              message: provider.isToday ? 'Tap to change status' : 'Past dates are read-only',
+              child: AnimatedProgressRing(
+                status: status,
+                onTap: provider.isToday
+                    ? () {
+                        provider.cycleHabitStatus(habit.id);
+                      }
+                    : null,
+              ),
             ),
 
             // More Options Popup Menu

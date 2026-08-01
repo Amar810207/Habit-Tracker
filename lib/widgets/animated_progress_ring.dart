@@ -4,13 +4,13 @@ import '../models/habit.dart';
 
 class AnimatedProgressRing extends StatefulWidget {
   final HabitStatus status;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final double size;
 
   const AnimatedProgressRing({
     super.key,
     required this.status,
-    required this.onTap,
+    this.onTap,
     this.size = 54.0,
   });
 
@@ -44,10 +44,11 @@ class _AnimatedProgressRingState extends State<AnimatedProgressRing>
   }
 
   void _handleTap() {
+    if (widget.onTap == null) return;
     _scaleController.forward().then((_) {
       _scaleController.reverse();
     });
-    widget.onTap();
+    widget.onTap!();
   }
 
   @override
@@ -56,17 +57,19 @@ class _AnimatedProgressRingState extends State<AnimatedProgressRing>
     final progress = widget.status.progressPercentage;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final isInteractive = widget.onTap != null;
+
     return GestureDetector(
-      onTapDown: (_) => _scaleController.forward(),
-      onTapUp: (_) => _scaleController.reverse(),
-      onTapCancel: () => _scaleController.reverse(),
-      onTap: _handleTap,
+      onTapDown: isInteractive ? (_) => _scaleController.forward() : null,
+      onTapUp: isInteractive ? (_) => _scaleController.reverse() : null,
+      onTapCancel: isInteractive ? () => _scaleController.reverse() : null,
+      onTap: isInteractive ? _handleTap : null,
       behavior: HitTestBehavior.opaque,
       child: AnimatedBuilder(
         animation: _scaleAnimation,
         builder: (context, child) {
           return Transform.scale(
-            scale: _scaleAnimation.value,
+            scale: isInteractive ? _scaleAnimation.value : 1.0,
             child: SizedBox(
               width: widget.size,
               height: widget.size,
@@ -89,8 +92,8 @@ class _AnimatedProgressRingState extends State<AnimatedProgressRing>
                           progress: fillValue,
                           color: activeColor,
                           trackColor: isDark
-                              ? Colors.white.withOpacity(0.12)
-                              : Colors.black.withOpacity(0.08),
+                              ? Colors.white.withValues(alpha: 0.12)
+                              : Colors.black.withValues(alpha: 0.08),
                           strokeWidth: 4.5,
                         ),
                         child: Center(
@@ -100,7 +103,7 @@ class _AnimatedProgressRingState extends State<AnimatedProgressRing>
                             height: widget.size * 0.65,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: activeColor.withOpacity(0.15),
+                              color: activeColor.withValues(alpha: 0.15),
                             ),
                             child: Icon(
                               _getIconForStatus(widget.status),
