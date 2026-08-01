@@ -217,19 +217,19 @@ class HabitProvider with ChangeNotifier {
     return score / _habits.length;
   }
 
-  void _updateReminderNotification() {
-    if (!_reminderEnabled || _habits.isEmpty) {
-      _notificationService.cancelAll();
-      return;
-    }
+  double get todayCompletionRatio {
+    if (_habits.isEmpty) return 1.0;
+    final now = DateTime.now();
+    final todayDate = DateTime(now.year, now.month, now.day);
+    final completedCount = _habits.where((h) => h.getStatusForDate(todayDate) == HabitStatus.completed).length;
+    return completedCount / _habits.length;
+  }
 
-    final uncompletedCount = _habits.where((h) => h.getStatusForDate(DateTime.now()) == HabitStatus.notDone).length;
-    if (uncompletedCount > 0) {
-      _notificationService.scheduleDailyReminder(
-        time: _reminderTime,
-        title: 'Habit Tracker Reminder 🔔',
-        body: 'You have $uncompletedCount habit${uncompletedCount > 1 ? "s" : ""} left to complete today!',
-      );
-    }
+  void _updateReminderNotification() {
+    _notificationService.syncScheduledNotifications(
+      enabled: _reminderEnabled,
+      todayCompletionRatio: todayCompletionRatio,
+      hasHabits: _habits.isNotEmpty,
+    );
   }
 }

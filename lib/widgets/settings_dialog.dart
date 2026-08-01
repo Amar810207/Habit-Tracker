@@ -66,16 +66,16 @@ class SettingsDialog extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Daily Evening Reminder Notifications
+            // Scheduled Daily Reminders
             const Text(
-              'Daily Reminder Notification',
+              'Scheduled Daily Reminders',
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Enable Daily Reminder'),
-              subtitle: const Text('Notify in evening if habits remain uncompleted'),
+              title: const Text('Enable Daily Check-in Reminders'),
+              subtitle: const Text('Fixed schedule: 10:00 AM, 3:00 PM, and 8:00 PM based on habit completion'),
               value: provider.reminderEnabled,
               onChanged: (val) {
                 provider.setReminderSettings(val, provider.reminderTime);
@@ -83,21 +83,24 @@ class SettingsDialog extends StatelessWidget {
             ),
 
             if (provider.reminderEnabled) ...[
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Reminder Time'),
-                trailing: TextButton.icon(
-                  icon: const Icon(Icons.access_time_rounded),
-                  label: Text(provider.reminderTime.format(context)),
-                  onPressed: () async {
-                    final newTime = await showTimePicker(
-                      context: context,
-                      initialTime: provider.reminderTime,
-                    );
-                    if (newTime != null) {
-                      provider.setReminderSettings(true, newTime);
-                    }
-                  },
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('• 10:00 AM: If 0% completed', style: TextStyle(fontSize: 12)),
+                    SizedBox(height: 4),
+                    Text('• 3:00 PM: If < 50% completed', style: TextStyle(fontSize: 12)),
+                    SizedBox(height: 4),
+                    Text('• 8:00 PM: If < 75% completed', style: TextStyle(fontSize: 12)),
+                  ],
                 ),
               ),
             ],

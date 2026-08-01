@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:habit_tracker/models/habit.dart';
 import 'package:habit_tracker/services/storage_service.dart';
+import 'package:habit_tracker/services/notification_service.dart';
 import 'package:habit_tracker/providers/habit_provider.dart';
 
 void main() {
@@ -82,6 +83,29 @@ void main() {
       );
 
       expect(habit.getStreak(now), equals(3));
+    });
+
+    test('Notification slot threshold logic', () {
+      // Slot 10 AM: 0% completion threshold (0.01)
+      final slot10 = NotificationService.scheduledSlots[0];
+      expect(slot10.hour, equals(10));
+      expect(slot10.completionThreshold, equals(0.01));
+      expect(0.0 < slot10.completionThreshold, isTrue); // 0% triggers
+      expect(0.2 < slot10.completionThreshold, isFalse); // 20% does not trigger
+
+      // Slot 3 PM: 50% completion threshold (0.50)
+      final slot15 = NotificationService.scheduledSlots[1];
+      expect(slot15.hour, equals(15));
+      expect(slot15.completionThreshold, equals(0.50));
+      expect(0.4 < slot15.completionThreshold, isTrue); // < 50% triggers
+      expect(0.6 < slot15.completionThreshold, isFalse); // >= 50% does not trigger
+
+      // Slot 8 PM: 75% completion threshold (0.75)
+      final slot20 = NotificationService.scheduledSlots[2];
+      expect(slot20.hour, equals(20));
+      expect(slot20.completionThreshold, equals(0.75));
+      expect(0.6 < slot20.completionThreshold, isTrue); // < 75% triggers
+      expect(0.8 < slot20.completionThreshold, isFalse); // >= 75% does not trigger
     });
   });
 }
